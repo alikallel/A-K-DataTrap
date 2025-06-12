@@ -95,6 +95,28 @@ A-K DataTrap is an advanced deception framework that populates systems with real
     ├── linux_history_injector.py
     └── windows_history_injector.py
 ````
+---
+
+## Cleaning Up
+To remove generated artifacts, you can run the cleanup script:
+
+```bash
+# Interactive mode (default)
+python clean_generated_artifacts.py
+
+# Preview what would be deleted
+python clean_generated_artifacts.py --preview
+
+# Force cleanup without prompts
+python clean_generated_artifacts.py --force
+
+# Show help
+python clean_generated_artifacts.py --help
+```
+
+---
+
+
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
