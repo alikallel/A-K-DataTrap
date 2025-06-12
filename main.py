@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Main application module
-Contains the Application class that orchestrates SSH key generation, web history injection, document generation, API key generation, and log generation
+Contains the Application class that orchestrates SSH key generation, web history injection, document generation, API key generation, source code generation, and log generation
 """
 
 import sys
@@ -10,9 +10,9 @@ from os_detector import OSDetector
 from sshkeygenerator.factory import SSHKeyGeneratorFactory
 from webhistory.history_factory import WebHistoryInjectorFactory
 from documentgenerator.document_factory import DocumentGeneratorFactory
-from  apikeygenerator.api_factory import APIKeyGeneratorFactory
+from apikeygenerator.api_factory import APIKeyGeneratorFactory
+from sourcecodegenerator.source_code_factory import SourceCodeGeneratorFactory
 from loggenerator.log_factory import LogGeneratorFactory
-
 
 
 class Application:
@@ -24,13 +24,14 @@ class Application:
         self.history_injector = None
         self.document_generator = None
         self.api_generator = None
+        self.source_code_generator = None
         self.log_generator = None
     
     def _display_banner(self):
         """Display the application banner"""
         banner = """
     ___                __ __    ____        __       ______               
-   /   |              / //_/   / __ \\____ */ /*____ /_  __/________ _____ 
+   /   |              / //_/   / __ \\____ _/ /____ /_  __/________ _____ 
   / /| |    ______   / ,<     / / / / __ `/ __/ __ `// / / ___/ __ `/ __ \\
  / ___ |   /_____/  / /| |   / /_/ / /_/ / /_/ /_/ // / / /  / /_/ / /_/ /
 /_/  |_|           /_/ |_|  /_____/\\__,_/\\__/\\__,_//_/ /_/   \\__,_/ .___/ 
@@ -46,12 +47,15 @@ class Application:
         system_name = self.detector.get_system_name()
         ssh_dir = Path.home() / '.ssh'
         docs_dir = Path.home() / 'Generated_Documents'
+        source_dir = Path.home() / 'Code_Source'
         
         print(f"Detected operating system: {system_name}")
         print(f"SSH directory will be: {ssh_dir}")
         print(f"Documents directory will be: {docs_dir}")
+        print(f"Source code directory will be: {source_dir}")
         print(f"Supported browsers: {', '.join(WebHistoryInjectorFactory.get_supported_browsers())}")
         print(f"Supported document formats: {', '.join(DocumentGeneratorFactory.get_supported_formats())}")
+        print(f"Supported programming languages: {', '.join(SourceCodeGeneratorFactory.get_supported_languages())}")
         print(f"Supported log types: {len(LogGeneratorFactory.get_supported_log_types().get(system_name, []))} types available")
         print("-" * 70)
     
@@ -62,23 +66,24 @@ class Application:
         print("2. Inject Web History")
         print("3. Generate Documents")
         print("4. Generate API Keys")
-        print("5. Generate Logs")
-        print("6. Execute All Operations")
-        print("7. Exit")
+        print("5. Generate Source Code")
+        print("6. Generate Logs")
+        print("7. Execute All Operations")
+        print("8. Exit")
         print("-" * 60)
         
         while True:
             try:
-                user_input = input("Enter your choice(s) (1-7): ").strip()
+                user_input = input("Enter your choice(s) (1-8): ").strip()
                 choices = user_input.split()
                 
                 # Validate all choices
                 valid_choices = []
                 for choice in choices:
-                    if choice in ['1', '2', '3', '4', '5', '6', '7']:
+                    if choice in ['1', '2', '3', '4', '5', '6', '7', '8']:
                         valid_choices.append(int(choice))
                     else:
-                        print(f"Invalid choice '{choice}'. Please enter numbers 1-7.")
+                        print(f"Invalid choice '{choice}'. Please enter numbers 1-8.")
                         break
                 else:
                     # All choices are valid
@@ -144,6 +149,20 @@ class Application:
             print("Executing Windows API key generation...")
         
         result = self.api_generator.generate_keys()
+        return result
+    
+    def _execute_source_code_generator(self):
+        """Execute the source code generator"""
+        print("\n" + "="*50)
+        print("EXECUTING SOURCE CODE GENERATION")
+        print("="*50)
+        
+        if self.detector.is_linux():
+            print("Executing Linux source code generation...")
+        elif self.detector.is_windows():
+            print("Executing Windows source code generation...")
+        
+        result = self.source_code_generator.generate_source_code()
         return result
     
     def _execute_log_generator(self):
@@ -255,6 +274,23 @@ class Application:
             print(f"Error during API key generation: {e}")
             return False
     
+    def _execute_source_code(self):
+        """Execute source code generation"""
+        try:
+            # Create source code generator if not already created
+            if not self.source_code_generator:
+                self.source_code_generator = SourceCodeGeneratorFactory.create_generator()
+            
+            # Execute the generator
+            result = self._execute_source_code_generator()
+            
+            # Display results
+            return self._display_results("Source Code Generation", result)
+            
+        except Exception as e:
+            print(f"Error during source code generation: {e}")
+            return False
+    
     def _execute_logs(self):
         """Execute log generation"""
         try:
@@ -283,7 +319,8 @@ class Application:
             (2, "Web History Injection", self._execute_web_history),
             (3, "Document Generation", self._execute_documents),
             (4, "API Key Generation", self._execute_api_keys),
-            (5, "Log Generation", self._execute_logs)
+            (5, "Source Code Generation", self._execute_source_code),
+            (6, "Log Generation", self._execute_logs)
         ]
         
         success_count = 0
@@ -314,11 +351,11 @@ class Application:
     
     def _execute_selected_operations(self, choices):
         """Execute the selected operations"""
-        if 7 in choices:  # Exit
+        if 8 in choices:  # Exit
             print("\nExiting application. Goodbye!")
             return True, True  # success=True, exit=True
         
-        if 6 in choices:  # Execute all
+        if 7 in choices:  # Execute all
             success = self._execute_all()
             return success, False
         
@@ -328,7 +365,8 @@ class Application:
             2: ("Web History Injection", self._execute_web_history),
             3: ("Document Generation", self._execute_documents),
             4: ("API Key Generation", self._execute_api_keys),
-            5: ("Log Generation", self._execute_logs)
+            5: ("Source Code Generation", self._execute_source_code),
+            6: ("Log Generation", self._execute_logs)
         }
         
         success_count = 0
@@ -401,6 +439,7 @@ class Application:
         except Exception as e:
             print(f"\nAn unexpected error occurred: {e}")
             sys.exit(1)
+
 
 def main():
     """Entry point function"""
