@@ -1,6 +1,6 @@
 # A-K DataTrap
 
-    A-K DataTrap is an advanced deception framework that populates systems with realistic but fake data to create convincing decoy environments. It is designed for security testing, digital forensics, red teaming, and education purposes.
+A-K DataTrap is an advanced deception framework that populates systems with realistic but fake data to create convincing decoy environments. It is designed for security testing, digital forensics, red teaming, and education purposes.
 
 ---
 
