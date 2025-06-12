@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Main application module
-Contains the Application class that orchestrates SSH key generation, web history injection, and document generation
+Contains the Application class that orchestrates SSH key generation, web history injection, document generation, API key generation, and log generation
 """
 
 import sys
@@ -10,6 +10,9 @@ from os_detector import OSDetector
 from sshkeygenerator.factory import SSHKeyGeneratorFactory
 from webhistory.history_factory import WebHistoryInjectorFactory
 from documentgenerator.document_factory import DocumentGeneratorFactory
+from  apikeygenerator.api_factory import APIKeyGeneratorFactory
+from loggenerator.log_factory import LogGeneratorFactory
+
 
 
 class Application:
@@ -20,6 +23,23 @@ class Application:
         self.ssh_generator = None
         self.history_injector = None
         self.document_generator = None
+        self.api_generator = None
+        self.log_generator = None
+    
+    def _display_banner(self):
+        """Display the application banner"""
+        banner = """
+    ___                __ __    ____        __       ______               
+   /   |              / //_/   / __ \\____ */ /*____ /_  __/________ _____ 
+  / /| |    ______   / ,<     / / / / __ `/ __/ __ `// / / ___/ __ `/ __ \\
+ / ___ |   /_____/  / /| |   / /_/ / /_/ / /_/ /_/ // / / /  / /_/ / /_/ /
+/_/  |_|           /_/ |_|  /_____/\\__,_/\\__/\\__,_//_/ /_/   \\__,_/ .___/ 
+                                                                 /_/      
+"""
+        print(banner)
+        print("="*70)
+        print("Multi-Platform Security & Data Generation Tool")
+        print("="*70)
     
     def _display_system_info(self):
         """Display information about the detected system"""
@@ -32,28 +52,41 @@ class Application:
         print(f"Documents directory will be: {docs_dir}")
         print(f"Supported browsers: {', '.join(WebHistoryInjectorFactory.get_supported_browsers())}")
         print(f"Supported document formats: {', '.join(DocumentGeneratorFactory.get_supported_formats())}")
+        print(f"Supported log types: {len(LogGeneratorFactory.get_supported_log_types().get(system_name, []))} types available")
         print("-" * 70)
     
     def _display_menu(self):
         """Display the main menu options"""
-        print("\nSelect operation:")
+        print("\nSelect operations (you can choose multiple by separating with spaces, e.g., '1 2 3'):")
         print("1. Generate SSH Keys")
         print("2. Inject Web History")
         print("3. Generate Documents")
-        print("4. Execute SSH Keys + Web History")
-        print("5. Execute SSH Keys + Documents")
-        print("6. Execute Web History + Documents")
-        print("7. Execute All (SSH Keys + Web History + Documents)")
-        print("8. Exit")
+        print("4. Generate API Keys")
+        print("5. Generate Logs")
+        print("6. Execute All Operations")
+        print("7. Exit")
         print("-" * 60)
         
         while True:
             try:
-                choice = input("Enter your choice (1-8): ").strip()
-                if choice in ['1', '2', '3', '4', '5', '6', '7', '8']:
-                    return int(choice)
+                user_input = input("Enter your choice(s) (1-7): ").strip()
+                choices = user_input.split()
+                
+                # Validate all choices
+                valid_choices = []
+                for choice in choices:
+                    if choice in ['1', '2', '3', '4', '5', '6', '7']:
+                        valid_choices.append(int(choice))
+                    else:
+                        print(f"Invalid choice '{choice}'. Please enter numbers 1-7.")
+                        break
                 else:
-                    print("Invalid choice. Please enter 1-8.")
+                    # All choices are valid
+                    if valid_choices:
+                        return valid_choices
+                    else:
+                        print("Please enter at least one choice.")
+                        
             except (ValueError, KeyboardInterrupt):
                 print("\nInvalid input. Please try again.")
     
@@ -97,6 +130,34 @@ class Application:
             print("Executing Windows document generation...")
         
         result = self.document_generator.generate_documents()
+        return result
+    
+    def _execute_api_generator(self):
+        """Execute the API key generator"""
+        print("\n" + "="*50)
+        print("EXECUTING API KEY GENERATION")
+        print("="*50)
+        
+        if self.detector.is_linux():
+            print("Executing Linux API key generation...")
+        elif self.detector.is_windows():
+            print("Executing Windows API key generation...")
+        
+        result = self.api_generator.generate_keys()
+        return result
+    
+    def _execute_log_generator(self):
+        """Execute the log generator"""
+        print("\n" + "="*50)
+        print("EXECUTING LOG GENERATION")
+        print("="*50)
+        
+        if self.detector.is_linux():
+            print("Executing Linux log generation...")
+        elif self.detector.is_windows():
+            print("Executing Windows log generation...")
+        
+        result = self.log_generator.generate_logs()
         return result
     
     def _display_results(self, operation_name, result):
@@ -177,144 +238,140 @@ class Application:
             print(f"Error during document generation: {e}")
             return False
     
-    def _execute_ssh_and_history(self):
-        """Execute both SSH key generation and web history injection"""
-        print("\n" + "="*70)
-        print("EXECUTING SSH KEYS + WEB HISTORY")
-        print("="*70)
-        
-        success_count = 0
-        
-        # Execute SSH keys
-        if self._execute_ssh_keys():
-            success_count += 1
-        
-        # Execute web history
-        if self._execute_web_history():
-            success_count += 1
-        
-        # Summary
-        print("\n" + "="*50)
-        print("EXECUTION SUMMARY")
-        print("="*50)
-        print(f"Successfully completed: {success_count}/2 operations")
-        
-        if success_count == 2:
-            print("✅ All operations completed successfully!")
-            return True
-        elif success_count == 1:
-            print("⚠ Some operations failed. Check the output above.")
-            return False
-        else:
-            print("❌ All operations failed.")
+    def _execute_api_keys(self):
+        """Execute API key generation"""
+        try:
+            # Create API generator if not already created
+            if not self.api_generator:
+                self.api_generator = APIKeyGeneratorFactory.create_generator()
+            
+            # Execute the generator
+            result = self._execute_api_generator()
+            
+            # Display results
+            return self._display_results("API Key Generation", result)
+            
+        except Exception as e:
+            print(f"Error during API key generation: {e}")
             return False
     
-    def _execute_ssh_and_documents(self):
-        """Execute SSH key generation and document generation"""
-        print("\n" + "="*70)
-        print("EXECUTING SSH KEYS + DOCUMENTS")
-        print("="*70)
-        
-        success_count = 0
-        
-        # Execute SSH keys
-        if self._execute_ssh_keys():
-            success_count += 1
-        
-        # Execute documents
-        if self._execute_documents():
-            success_count += 1
-        
-        # Summary
-        print("\n" + "="*50)
-        print("EXECUTION SUMMARY")
-        print("="*50)
-        print(f"Successfully completed: {success_count}/2 operations")
-        
-        if success_count == 2:
-            print("✅ All operations completed successfully!")
-            return True
-        elif success_count == 1:
-            print("⚠ Some operations failed. Check the output above.")
-            return False
-        else:
-            print("❌ All operations failed.")
-            return False
-    
-    def _execute_history_and_documents(self):
-        """Execute web history injection and document generation"""
-        print("\n" + "="*70)
-        print("EXECUTING WEB HISTORY + DOCUMENTS")
-        print("="*70)
-        
-        success_count = 0
-        
-        # Execute web history
-        if self._execute_web_history():
-            success_count += 1
-        
-        # Execute documents
-        if self._execute_documents():
-            success_count += 1
-        
-        # Summary
-        print("\n" + "="*50)
-        print("EXECUTION SUMMARY")
-        print("="*50)
-        print(f"Successfully completed: {success_count}/2 operations")
-        
-        if success_count == 2:
-            print("✅ All operations completed successfully!")
-            return True
-        elif success_count == 1:
-            print("⚠ Some operations failed. Check the output above.")
-            return False
-        else:
-            print("❌ All operations failed.")
+    def _execute_logs(self):
+        """Execute log generation"""
+        try:
+            # Create log generator if not already created
+            if not self.log_generator:
+                self.log_generator = LogGeneratorFactory.create_generator()
+            
+            # Execute the generator
+            result = self._execute_log_generator()
+            
+            # Display results
+            return self._display_results("Log Generation", result)
+            
+        except Exception as e:
+            print(f"Error during log generation: {e}")
             return False
     
     def _execute_all(self):
-        """Execute all operations: SSH keys, web history, and documents"""
+        """Execute all operations"""
         print("\n" + "="*70)
         print("EXECUTING ALL OPERATIONS")
         print("="*70)
         
+        operations = [
+            (1, "SSH Key Generation", self._execute_ssh_keys),
+            (2, "Web History Injection", self._execute_web_history),
+            (3, "Document Generation", self._execute_documents),
+            (4, "API Key Generation", self._execute_api_keys),
+            (5, "Log Generation", self._execute_logs)
+        ]
+        
         success_count = 0
+        total_operations = len(operations)
         
-        # Execute SSH keys
-        if self._execute_ssh_keys():
-            success_count += 1
-        
-        # Execute web history
-        if self._execute_web_history():
-            success_count += 1
-        
-        # Execute documents
-        if self._execute_documents():
-            success_count += 1
+        for op_num, op_name, op_func in operations:
+            if op_func():
+                success_count += 1
         
         # Summary
         print("\n" + "="*50)
         print("EXECUTION SUMMARY")
         print("="*50)
-        print(f"Successfully completed: {success_count}/3 operations")
+        print(f"Successfully completed: {success_count}/{total_operations} operations")
         
-        if success_count == 3:
+        if success_count == total_operations:
             print("✅ All operations completed successfully!")
             return True
-        elif success_count >= 2:
+        elif success_count >= total_operations // 2:
             print("⚠ Most operations succeeded. Check the output above.")
             return True
-        elif success_count == 1:
-            print("⚠ Only one operation succeeded. Check the output above.")
+        elif success_count > 0:
+            print("⚠ Some operations succeeded. Check the output above.")
             return False
         else:
             print("❌ All operations failed.")
             return False
     
+    def _execute_selected_operations(self, choices):
+        """Execute the selected operations"""
+        if 7 in choices:  # Exit
+            print("\nExiting application. Goodbye!")
+            return True, True  # success=True, exit=True
+        
+        if 6 in choices:  # Execute all
+            success = self._execute_all()
+            return success, False
+        
+        # Execute individual operations
+        operations = {
+            1: ("SSH Key Generation", self._execute_ssh_keys),
+            2: ("Web History Injection", self._execute_web_history),
+            3: ("Document Generation", self._execute_documents),
+            4: ("API Key Generation", self._execute_api_keys),
+            5: ("Log Generation", self._execute_logs)
+        }
+        
+        success_count = 0
+        selected_operations = [(choice, operations[choice]) for choice in choices if choice in operations]
+        
+        if not selected_operations:
+            print("No valid operations selected.")
+            return False, False
+        
+        print("\n" + "="*70)
+        print(f"EXECUTING {len(selected_operations)} SELECTED OPERATION(S)")
+        print("="*70)
+        
+        for choice, (op_name, op_func) in selected_operations:
+            if op_func():
+                success_count += 1
+        
+        # Summary for multiple operations
+        if len(selected_operations) > 1:
+            print("\n" + "="*50)
+            print("EXECUTION SUMMARY")
+            print("="*50)
+            print(f"Successfully completed: {success_count}/{len(selected_operations)} operations")
+            
+            if success_count == len(selected_operations):
+                print("✅ All selected operations completed successfully!")
+                return True, False
+            elif success_count > 0:
+                print("⚠ Some operations succeeded. Check the output above.")
+                return False, False
+            else:
+                print("❌ All selected operations failed.")
+                return False, False
+        else:
+            # Single operation
+            return success_count > 0, False
+    
     def run(self):
         """Main application entry point"""
         try:
+            # Display banner
+            self._display_banner()
+            
             # Check if OS is supported
             if not self._check_system_support():
                 sys.exit(1)
@@ -324,33 +381,19 @@ class Application:
             
             # Main application loop
             while True:
-                choice = self._display_menu()
+                choices = self._display_menu()
                 
-                if choice == 1:
-                    success = self._execute_ssh_keys()
-                elif choice == 2:
-                    success = self._execute_web_history()
-                elif choice == 3:
-                    success = self._execute_documents()
-                elif choice == 4:
-                    success = self._execute_ssh_and_history()
-                elif choice == 5:
-                    success = self._execute_ssh_and_documents()
-                elif choice == 6:
-                    success = self._execute_history_and_documents()
-                elif choice == 7:
-                    success = self._execute_all()
-                elif choice == 8:
-                    print("\nExiting application. Goodbye!")
+                success, should_exit = self._execute_selected_operations(choices)
+                
+                if should_exit:
                     sys.exit(0)
                 
                 # Ask if user wants to continue
-                if choice in [1, 2, 3, 4, 5, 6, 7]:
-                    print("\n" + "="*50)
-                    continue_choice = input("Do you want to perform another operation? (y/n): ").strip().lower()
-                    if continue_choice not in ['y', 'yes']:
-                        print("\nExiting application. Goodbye!")
-                        break
+                print("\n" + "="*50)
+                continue_choice = input("Do you want to perform another operation? (y/n): ").strip().lower()
+                if continue_choice not in ['y', 'yes']:
+                    print("\nExiting application. Goodbye!")
+                    break
                 
         except KeyboardInterrupt:
             print("\n\nOperation cancelled by user. Goodbye!")
